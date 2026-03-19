@@ -1,4 +1,4 @@
-# skill-adapter 🧩
+# SKILL-adapter 🧩
 
 ![image-20260320000755640](./assets/image-20260320000755640.png)
 
