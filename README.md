@@ -1,51 +1,62 @@
-﻿# skill-adapter
+# skill-adapter 🧩
 
 一个低侵入的 Skill Adapter SDK。你不需要迁移到新框架，只需要在现有 `client.xxx.create(...)` 调用前多包一层 `prepare()`。
 
-## 这是什么
+## 这是什么 ✨
 
 `skill-adapter` 是一个 **query-first routing + payload preparation** 的适配层 SDK。
 
-它不是新的 Agent 框架，也不接管你的执行引擎。它只做两件事：
-- `route(query)`: 基于技能 metadata 做 hybrid retrieval 和选择
-- `prepare(query, payload, mode)`: 选中 skill 后 lazy load `SKILL.md`，再把 augmentation 注入原始请求载荷
 
-当前 routing 已升级为：
-- BM25 关键词召回
-- sentence embedding 语义召回
-- 融合排序（hybrid fusion）
 
-当前 metadata routing 默认只依赖最小字段：
-- `name`
-- `description`
+## 为什么需要它 🤔
 
-系统会为每个 skill 构造：
+很多已有 chat/agent/llm 项目没有 skill 机制，出现可用性高的 SKILL 难以一键复用，并且直接改框架成本也极高。
 
-```text
-retrieval_text = name + "\n" + description
-```
+因此，`skill-adapter` 提供了一个快速复用 SKILL 的能力，它只做两件事：
 
-BM25 和 semantic retrieval 都只作用在 `retrieval_text` 上，不会在检索阶段读取完整 skill 正文。
+- `route(query)`: 基于技能 metadata （name & discription）做检索召回 （BM25 关键词召回 + sentence embedding 语义召回）；
+- `prepare(query, payload, mode)`: 选中 skill 后 lazy load `SKILL.md`，再把 augmentation 注入原始请求载荷；
 
-## 为什么需要它
-
-很多已有 chat/agent/llm 项目没有 skill 机制，直接改框架成本高。
-
-这个 SDK 的目标是：
 - 保持你现有的模型调用方式
 - 通过最小代码改动加上 skill 能力
 - skill 失效时自动 fallback 到原始 payload，不阻断主流程
 
-## 3 分钟接入示例
+
+
+## 快速部署 🔧
+
+```bash
+git clone https://github.com/Yirzzzz/SKILL-adapter.git
+cd SKILL-adapter
+pip install -e .
+```
+
+
+
+## 1 分钟接入示例 🚀
 
 ```python
+# 原来代码
+response = client.chat.completions.create(
+    model='Qwen/Qwen3-8B', # ModelScope Model-Id, required
+    messages=[
+        {
+          'role': 'user',
+          'content': '9.9和9.11谁大'
+        }
+    ],
+    stream=True,
+    extra_body=extra_body
+)
+
+# 接入后代码
 from skill_adapter import SkillRuntime
 
-runtime = SkillRuntime(skill_dirs=["./skills"])
+runtime = SkillRuntime(skill_dirs=["./skills"]) # 定义skills路径
 
 prepared = runtime.prepare(
-    query="请总结这篇论文",
-    payload={"messages": [{"role": "user", "content": "请总结这篇论文"}]},
+    query="9.9和9.11谁大",
+    payload={"messages": [{"role": "user", "content": "9.9和9.11谁大"}]},
     mode="messages",
     debug=True,
 )
@@ -53,12 +64,16 @@ prepared = runtime.prepare(
 response = client.chat.completions.create(
     model="Qwen/Qwen3-8B",
     **prepared.payload,
+    stream=True,
+    extra_body=extra_body
 )
-
-print(prepared.trace)
 ```
 
-## route 示例
+
+
+## route 示例 🛣️
+
+通过该代码可以查看 SKILL 检索召回的结果
 
 ```python
 selection = runtime.route(query="请总结这篇论文", debug=True)
@@ -67,27 +82,8 @@ print(selection.candidates)
 print(selection.reason)
 ```
 
-`route()` 只做 metadata routing，不做 payload augmentation。
+除此之外，项目提供一个基于 `FastAPI` 的本地 web 可视化页面， 🌐，用于观察：
 
-## hybrid retrieval demo
-
-```python
-selection = runtime.route(query="请总结这篇论文的贡献和局限", debug=True)
-print(selection.trace)
-
-prepared = runtime.prepare(
-    query="请总结这篇论文的贡献和局限",
-    payload={"messages": [{"role": "user", "content": "请总结这篇论文的贡献和局限"}]},
-    mode="messages",
-    debug=True,
-)
-print(prepared.payload)
-print(prepared.trace)
-```
-
-## FastAPI retrieval visualizer
-
-项目提供一个基于 `FastAPI` 的本地 web 可视化页面，用于观察：
 - query 调整后的召回变化
 - BM25 候选、semantic 候选、fused ranking
 - raw score / final score
@@ -117,7 +113,9 @@ http://127.0.0.1:8000
 - 查看 selected skill 的全文预览
 - 对比 `route()` 与 `prepare()` 的 trace
 
-## prepare(messages) 示例
+
+
+## prepare(messages) 示例 💬
 
 ```python
 prepared = runtime.prepare(
@@ -133,7 +131,7 @@ response = client.chat.completions.create(
 )
 ```
 
-## prepare(input) 示例
+## prepare(input) 示例 📝
 
 ```python
 prepared = runtime.prepare(
@@ -149,7 +147,7 @@ response = client.responses.create(
 )
 ```
 
-## trace/debug 示例
+## trace/debug 示例 🧪
 
 ```python
 {
@@ -188,7 +186,9 @@ response = client.responses.create(
 }
 ```
 
-## 项目结构与模块说明
+
+
+## 项目结构与模块说明 🏗️
 
 ```text
 skill-adapter/
@@ -221,35 +221,6 @@ skill-adapter/
       paper-summary/SKILL.md
       web-summary/SKILL.md
       code-explain/SKILL.md
-  tests/
-    test_discovery.py
-    test_parser.py
-    test_retrieval.py
-    test_routing.py
-    test_prepare.py
+ 
 ```
 
-## 设计边界（MVP）
-
-当前版本只做：
-- local skill discovery
-- metadata parsing/indexing
-- BM25 + semantic hybrid retrieval + activation
-- selected skill lazy load
-- payload augmentation
-- trace/debug
-- fallback
-
-当前版本不做：
-- tool execution / MCP / workflow
-- remote registry / marketplace
-- 向量数据库 / 重框架依赖
-
-## 依赖说明
-
-新增依赖：
-- `sentence-transformers`
-
-用途：
-- 为 skill metadata 的 `retrieval_text` 提供本地 embedding 编码能力
-- 在内存中完成语义相似度计算，不依赖远程 embedding 服务或向量数据库
