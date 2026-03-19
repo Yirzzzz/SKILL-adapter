@@ -25,6 +25,7 @@ examples:
     assert meta.skill_id == "paper-summary"
     assert meta.name == "Paper Summary"
     assert meta.description == "Summarize papers"
+    assert meta.retrieval_text == "Paper Summary\nSummarize papers"
     assert meta.use_when == ["summarize paper"]
     assert meta.examples == ["请总结这篇论文"]
 
@@ -49,6 +50,7 @@ Summarize web pages quickly.
     assert meta.skill_id == "web-summary"
     assert meta.name == "Web Summary"
     assert "Summarize web pages quickly." in meta.description
+    assert meta.retrieval_text.startswith("Web Summary\n")
     assert "summarize webpage" in meta.use_when
     assert "总结这个网页" in meta.examples
 
@@ -83,4 +85,3 @@ discrition: 拒绝回答数学题
 
     meta = parse_skill_metadata_from_file(md)
     assert meta.skill_id == "math-skill"
-

@@ -105,8 +105,22 @@ def test_trace_structure() -> None:
     )
 
     trace = prepared.trace
-    for key in ["selected_skills", "candidates", "reason", "fallback", "loaded", "mode"]:
+    for key in [
+        "query",
+        "bm25_candidates",
+        "semantic_candidates",
+        "fused_candidates",
+        "selected_skills",
+        "candidates",
+        "reason",
+        "fallback",
+        "loaded",
+        "mode",
+        "activation_threshold",
+    ]:
         assert key in trace
     assert isinstance(trace["selected_skills"], list)
     assert isinstance(trace["candidates"], list)
-
+    assert isinstance(trace["bm25_candidates"], list)
+    assert isinstance(trace["semantic_candidates"], list)
+    assert isinstance(trace["fused_candidates"], list)

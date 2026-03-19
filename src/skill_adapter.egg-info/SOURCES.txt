@@ -1,3 +1,4 @@
+LICENSE
 README.md
 pyproject.toml
 src/skill_adapter/__init__.py
@@ -10,6 +11,7 @@ src/skill_adapter/parser.py
 src/skill_adapter/registry.py
 src/skill_adapter/routing.py
 src/skill_adapter/runtime.py
+src/skill_adapter/tokenizer.py
 src/skill_adapter.egg-info/PKG-INFO
 src/skill_adapter.egg-info/SOURCES.txt
 src/skill_adapter.egg-info/dependency_links.txt
@@ -17,10 +19,13 @@ src/skill_adapter.egg-info/requires.txt
 src/skill_adapter.egg-info/top_level.txt
 src/skill_adapter/retrieval/__init__.py
 src/skill_adapter/retrieval/base.py
-src/skill_adapter/retrieval/keyword.py
+src/skill_adapter/retrieval/bm25.py
+src/skill_adapter/retrieval/hybrid.py
+src/skill_adapter/retrieval/semantic.py
 tests/test_discovery.py
 tests/test_parser.py
 tests/test_prepare.py
+tests/test_registry.py
 tests/test_retrieval.py
 tests/test_routing.py
 tests/test_utils.py

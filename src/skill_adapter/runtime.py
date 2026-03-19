@@ -6,7 +6,8 @@ from .config import SkillConfig
 from .loading import SkillLoader
 from .models import PreparedPayload, SkillSelection
 from .registry import SkillRegistry
-from .retrieval.keyword import KeywordRetriever
+from .retrieval.hybrid import HybridRetriever
+from .retrieval.semantic import SentenceTransformerEmbeddingBackend
 from .routing import SkillRouter
 
 
@@ -23,7 +24,15 @@ class SkillRuntime:
             config = SkillConfig.from_dirs(skill_dirs)
         self.config = config
         self.registry = SkillRegistry.build(self.config.skill_dirs)
-        self.router = SkillRouter(config=self.config, retriever=KeywordRetriever())
+        self.router = SkillRouter(
+            config=self.config,
+            retriever=HybridRetriever(
+                config=self.config,
+                embedding_backend=SentenceTransformerEmbeddingBackend(
+                    model_name=self.config.embedding_model_name
+                ),
+            ),
+        )
         self.loader = SkillLoader()
 
     def route(self, query: str, debug: Optional[bool] = None) -> SkillSelection:
@@ -41,14 +50,17 @@ class SkillRuntime:
         original_payload = deepcopy(payload)
         selection = self.route(query=query, debug=debug)
 
-        trace: Dict[str, Any] = {
-            "selected_skills": selection.selected_skills,
-            "candidates": selection.candidates,
-            "reason": selection.reason,
-            "fallback": selection.fallback,
-            "loaded": False,
-            "mode": mode,
-        }
+        trace: Dict[str, Any] = dict(selection.trace)
+        trace.update(
+            {
+                "selected_skills": selection.selected_skills,
+                "candidates": selection.candidates,
+                "reason": selection.reason,
+                "fallback": selection.fallback,
+                "loaded": False,
+                "mode": mode,
+            }
+        )
 
         if selection.fallback or not selection.selected_skills:
             return PreparedPayload(payload=original_payload, trace=trace)

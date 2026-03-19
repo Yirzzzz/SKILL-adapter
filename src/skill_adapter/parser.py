@@ -89,6 +89,7 @@ def parse_skill_metadata_from_file(skill_md_path: Path) -> SkillMetadata:
     front_description = front_matter.get("description") or front_matter.get("discrition")
     name = str(front_matter.get("name") or body_name or default_name).strip()
     description = str(front_description or body_description or _extract_description(body)).strip()
+    retrieval_text = "\n".join(part for part in [name, description] if part).strip()
 
     use_when = _ensure_list(front_matter.get("use_when"))
     if not use_when:
@@ -102,6 +103,7 @@ def parse_skill_metadata_from_file(skill_md_path: Path) -> SkillMetadata:
         skill_id=skill_id,
         name=name or default_id,
         description=description,
+        retrieval_text=retrieval_text,
         use_when=use_when,
         examples=examples,
         path=str(skill_md_path),
