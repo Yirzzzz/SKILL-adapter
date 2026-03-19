@@ -1,0 +1,952 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Skill Retrieval Visualizer</title>
+    <style>
+      :root {
+        --bg: #f4efe7;
+        --surface: rgba(255, 251, 245, 0.88);
+        --surface-strong: #fffdf8;
+        --ink: #192433;
+        --muted: #6c7a89;
+        --line: rgba(25, 36, 51, 0.08);
+        --accent: #0e3b5d;
+        --accent-2: #d97745;
+        --good: #20744d;
+        --warn: #ac5b2a;
+        --shadow: 0 18px 40px rgba(29, 39, 54, 0.09);
+        --radius-xl: 28px;
+        --radius-lg: 20px;
+        --radius-md: 16px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+        background:
+          radial-gradient(circle at top left, rgba(197, 220, 248, 0.72), transparent 28%),
+          radial-gradient(circle at top right, rgba(255, 214, 184, 0.68), transparent 30%),
+          linear-gradient(180deg, #f7f1e8 0%, #f1ece4 100%);
+      }
+
+      .page {
+        max-width: 1480px;
+        margin: 0 auto;
+        padding: 28px 20px 40px;
+      }
+
+      .hero {
+        padding: 28px 30px;
+        border-radius: var(--radius-xl);
+        color: #fbf6ef;
+        background: linear-gradient(135deg, rgba(12, 37, 65, 0.98), rgba(31, 70, 106, 0.92));
+        box-shadow: 0 26px 64px rgba(19, 33, 52, 0.16);
+      }
+
+      .hero h1 {
+        margin: 0;
+        font-size: 38px;
+        letter-spacing: -0.04em;
+      }
+
+      .hero p {
+        margin: 10px 0 0;
+        max-width: 900px;
+        color: rgba(251, 246, 239, 0.82);
+        line-height: 1.65;
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: 340px 1fr;
+        gap: 20px;
+        margin-top: 20px;
+        min-width: 0;
+      }
+
+      .panel {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-xl);
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(18px);
+        min-width: 0;
+      }
+
+      .sidebar {
+        padding: 22px;
+        position: sticky;
+        top: 20px;
+        height: fit-content;
+      }
+
+      .sidebar h2,
+      .content h2 {
+        margin: 0 0 14px;
+        font-size: 18px;
+      }
+
+      .group {
+        margin-bottom: 18px;
+      }
+
+      .label-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      input[type="text"],
+      textarea,
+      input[type="number"] {
+        width: 100%;
+        border: 1px solid rgba(25, 36, 51, 0.12);
+        border-radius: 14px;
+        padding: 12px 14px;
+        background: rgba(255, 255, 255, 0.72);
+        color: var(--ink);
+        font: inherit;
+      }
+
+      textarea {
+        min-height: 110px;
+        resize: vertical;
+      }
+
+      .range {
+        width: 100%;
+      }
+
+      .toggle-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 14px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.48);
+        margin-bottom: 10px;
+      }
+
+      .button-row {
+        display: flex;
+        gap: 10px;
+        margin-top: 18px;
+        flex-wrap: wrap;
+      }
+
+      button {
+        border: 0;
+        border-radius: 999px;
+        padding: 12px 16px;
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .primary {
+        background: linear-gradient(135deg, #103e63, #1f5d88);
+        color: #fffaf3;
+        box-shadow: 0 16px 28px rgba(22, 61, 95, 0.22);
+      }
+
+      .ghost {
+        background: rgba(255, 255, 255, 0.72);
+        color: var(--ink);
+        border: 1px solid rgba(25, 36, 51, 0.09);
+      }
+
+      .content {
+        display: grid;
+        gap: 20px;
+        min-width: 0;
+      }
+
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 14px;
+      }
+
+      .metric {
+        padding: 18px;
+        border-radius: var(--radius-lg);
+        background: var(--surface-strong);
+        border: 1px solid var(--line);
+      }
+
+      .metric .label {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: var(--muted);
+      }
+
+      .metric .value {
+        margin-top: 8px;
+        font-size: 30px;
+        font-weight: 700;
+      }
+
+      .query-card,
+      .trace-card,
+      .prepare-card,
+      .selected-card,
+      .skills-card {
+        padding: 22px;
+      }
+
+      .query-meta {
+        margin-top: 10px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .triptych {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+        min-width: 0;
+      }
+
+      .result-col {
+        padding: 18px;
+        min-width: 0;
+      }
+
+      .section-title {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 14px;
+      }
+
+      .section-title h3 {
+        margin: 0;
+        font-size: 16px;
+      }
+
+      .section-title span {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .candidate {
+        padding: 14px;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.72);
+        margin-bottom: 12px;
+      }
+
+      .candidate-top {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: baseline;
+        flex-wrap: wrap;
+      }
+
+      .candidate-title {
+        font-weight: 700;
+        min-width: 0;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+      }
+
+      .candidate-score {
+        font-size: 13px;
+        color: var(--accent-2);
+        font-weight: 700;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+      }
+
+      .bars {
+        display: grid;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .bar-row {
+        display: grid;
+        grid-template-columns: 72px 1fr 68px;
+        gap: 10px;
+        align-items: center;
+        font-size: 12px;
+        color: var(--muted);
+        min-width: 0;
+      }
+
+      .bar-track {
+        height: 8px;
+        border-radius: 999px;
+        background: rgba(17, 35, 69, 0.08);
+        overflow: hidden;
+        min-width: 0;
+      }
+
+      .bar-fill {
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, #1f5d88, #e68a53);
+      }
+
+      .reason {
+        margin-top: 10px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.55;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+      }
+
+      .dual {
+        display: grid;
+        grid-template-columns: 1.1fr 0.9fr;
+        gap: 16px;
+      }
+
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 10px 0 0;
+      }
+
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: #edf3fb;
+        color: #214467;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .good {
+        color: var(--good);
+      }
+
+      .warn {
+        color: var(--warn);
+      }
+
+      .stack {
+        display: grid;
+        gap: 12px;
+      }
+
+      pre {
+        margin: 0;
+        padding: 16px;
+        border-radius: 16px;
+        background: #fffdf9;
+        border: 1px solid var(--line);
+        color: #223244;
+        overflow: auto;
+        max-width: 100%;
+        white-space: pre-wrap;
+        word-break: break-word;
+        font-size: 12px;
+        line-height: 1.5;
+      }
+
+      .skill-item {
+        padding: 14px;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.68);
+      }
+
+      .detail-card {
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.72);
+        overflow: hidden;
+      }
+
+      .detail-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: center;
+        padding: 16px;
+      }
+
+      .detail-meta {
+        min-width: 0;
+        width: 100%;
+      }
+
+      .detail-title {
+        font-size: 16px;
+        font-weight: 700;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+      }
+
+      .detail-desc {
+        margin-top: 6px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.55;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+      }
+
+      .detail-toggle {
+        background: linear-gradient(135deg, #103e63, #1f5d88);
+        color: #fffaf3;
+        padding: 10px 14px;
+        white-space: nowrap;
+      }
+
+      .detail-body {
+        display: none;
+        padding: 0 16px 16px;
+        min-width: 0;
+      }
+
+      .detail-card.open .detail-body {
+        display: block;
+      }
+
+      .muted {
+        color: var(--muted);
+      }
+
+      .status-line {
+        font-size: 14px;
+        color: var(--muted);
+        margin-top: 8px;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+      }
+
+      .footer-note {
+        margin-top: 14px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      @media (max-width: 1200px) {
+        .layout,
+        .dual,
+        .metrics {
+          grid-template-columns: 1fr;
+        }
+
+        .sidebar {
+          position: static;
+        }
+      }
+
+      @media (max-width: 1360px) {
+        .triptych {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 960px) {
+        .triptych {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 720px) {
+        .page {
+          padding: 14px 12px 28px;
+        }
+
+        .hero {
+          padding: 22px 18px;
+        }
+
+        .hero h1 {
+          font-size: 28px;
+        }
+
+        .sidebar,
+        .query-card,
+        .trace-card,
+        .prepare-card,
+        .selected-card,
+        .skills-card,
+        .result-col {
+          padding: 16px;
+        }
+
+        .candidate-top,
+        .detail-head,
+        .section-title {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+
+        .bar-row {
+          grid-template-columns: 1fr;
+          gap: 8px;
+        }
+
+        .bar-track {
+          width: 100%;
+        }
+
+        .metric .value {
+          font-size: 24px;
+        }
+
+        .candidate,
+        .skill-item,
+        .detail-card {
+          width: 100%;
+        }
+
+        button,
+        .detail-toggle {
+          width: 100%;
+          justify-content: center;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <section class="hero">
+        <h1>Skill Retrieval Visualizer</h1>
+        <p>
+          面向 query → skill 召回分析的本地 web 面板。你可以调整 query、阈值、BM25/semantic 权重和 top-k，
+          观察候选排序、原始得分、最终融合得分、选中 skill，以及 prepare 后的 payload 变化。
+        </p>
+      </section>
+
+      <div class="layout">
+        <aside class="panel sidebar">
+          <h2>Routing Controls</h2>
+          <div class="group">
+            <div class="label-row"><label for="skill-dir">Skill Directory</label></div>
+            <input id="skill-dir" type="text" value="{{ default_skill_dir }}" />
+          </div>
+
+          <div class="group">
+            <div class="label-row"><label for="embedding-model">Embedding Model</label></div>
+            <input id="embedding-model" type="text" value="{{ default_embedding_model }}" />
+          </div>
+
+          <div class="group">
+            <div class="label-row"><label for="query">Query</label><span id="query-length">0 chars</span></div>
+            <textarea id="query">帮我做一道题：9.9和9.11谁大</textarea>
+          </div>
+
+          <div class="group">
+            <div class="label-row"><label for="top-k">Top K</label><span id="top-k-value">3</span></div>
+            <input class="range" id="top-k" type="range" min="1" max="10" value="3" />
+          </div>
+          <div class="group">
+            <div class="label-row"><label for="bm25-top-k">BM25 Top K</label><span id="bm25-top-k-value">5</span></div>
+            <input class="range" id="bm25-top-k" type="range" min="1" max="12" value="5" />
+          </div>
+          <div class="group">
+            <div class="label-row"><label for="semantic-top-k">Semantic Top K</label><span id="semantic-top-k-value">5</span></div>
+            <input class="range" id="semantic-top-k" type="range" min="1" max="12" value="5" />
+          </div>
+          <div class="group">
+            <div class="label-row"><label for="max-active-skills">Max Active Skills</label><span id="max-active-skills-value">1</span></div>
+            <input class="range" id="max-active-skills" type="range" min="1" max="5" value="1" />
+          </div>
+          <div class="group">
+            <div class="label-row"><label for="activation-threshold">Activation Threshold</label><span id="activation-threshold-value">0.35</span></div>
+            <input class="range" id="activation-threshold" type="range" min="0" max="5" step="0.05" value="0.35" />
+          </div>
+          <div class="group">
+            <div class="label-row"><label for="bm25-weight">BM25 Weight</label><span id="bm25-weight-value">0.50</span></div>
+            <input class="range" id="bm25-weight" type="range" min="0" max="3" step="0.05" value="0.5" />
+          </div>
+          <div class="group">
+            <div class="label-row"><label for="semantic-weight">Semantic Weight</label><span id="semantic-weight-value">0.50</span></div>
+            <input class="range" id="semantic-weight" type="range" min="0" max="3" step="0.05" value="0.5" />
+          </div>
+
+          <div class="toggle-row">
+            <span>Enable BM25</span>
+            <input id="enable-bm25" type="checkbox" checked />
+          </div>
+          <div class="toggle-row">
+            <span>Enable Semantic</span>
+            <input id="enable-semantic" type="checkbox" checked />
+          </div>
+
+          <div class="button-row">
+            <button class="primary" id="analyze-btn">Analyze Retrieval</button>
+            <button class="ghost" id="reset-btn">Reset</button>
+          </div>
+          <div class="footer-note">Project Root: {{ project_root }}</div>
+        </aside>
+
+        <main class="content">
+          <section class="metrics">
+            <div class="metric">
+              <div class="label">Indexed Skills</div>
+              <div class="value" id="metric-skills">0</div>
+            </div>
+            <div class="metric">
+              <div class="label">Selected Skills</div>
+              <div class="value" id="metric-selected">0</div>
+            </div>
+            <div class="metric">
+              <div class="label">Top Final Score</div>
+              <div class="value" id="metric-score">0.0000</div>
+            </div>
+            <div class="metric">
+              <div class="label">Lazy Load</div>
+              <div class="value" id="metric-loaded">no</div>
+            </div>
+          </section>
+
+          <section class="panel query-card">
+            <div class="section-title">
+              <h3>Decision Summary</h3>
+              <span id="formula-line">final_score = 0.50 * bm25_score + 0.50 * semantic_score</span>
+            </div>
+            <div id="decision-summary" class="status-line">Waiting for analysis.</div>
+            <div id="decision-chips" class="chips"></div>
+          </section>
+
+          <section class="triptych">
+            <div class="panel result-col">
+              <div class="section-title"><h3>BM25 Candidates</h3><span id="bm25-count">0 items</span></div>
+              <div id="bm25-list"></div>
+            </div>
+            <div class="panel result-col">
+              <div class="section-title"><h3>Semantic Candidates</h3><span id="semantic-count">0 items</span></div>
+              <div id="semantic-list"></div>
+            </div>
+            <div class="panel result-col">
+              <div class="section-title"><h3>Fused Ranking</h3><span id="fused-count">0 items</span></div>
+              <div id="fused-list"></div>
+            </div>
+          </section>
+
+          <section class="dual">
+            <div class="panel selected-card">
+              <div class="section-title"><h3>Selected Skill Details</h3><span>lazy loaded only when selected</span></div>
+              <div id="selected-skills" class="stack"></div>
+            </div>
+            <div class="panel skills-card">
+              <div class="section-title"><h3>Indexed Skills</h3><span>metadata layer only</span></div>
+              <div id="available-skills" class="stack"></div>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <script>
+      const defaults = {
+        query: "帮我做一道题：9.9和9.11谁大",
+        skillDir: {{ default_skill_dir | tojson }},
+        embeddingModel: {{ default_embedding_model | tojson }},
+        topK: 3,
+        bm25TopK: 5,
+        semanticTopK: 5,
+        maxActiveSkills: 1,
+        activationThreshold: 0.35,
+        bm25Weight: 0.5,
+        semanticWeight: 0.5,
+        enableBm25: true,
+        enableSemantic: true
+      };
+
+      const els = {
+        query: document.getElementById("query"),
+        skillDir: document.getElementById("skill-dir"),
+        embeddingModel: document.getElementById("embedding-model"),
+        topK: document.getElementById("top-k"),
+        bm25TopK: document.getElementById("bm25-top-k"),
+        semanticTopK: document.getElementById("semantic-top-k"),
+        maxActiveSkills: document.getElementById("max-active-skills"),
+        activationThreshold: document.getElementById("activation-threshold"),
+        bm25Weight: document.getElementById("bm25-weight"),
+        semanticWeight: document.getElementById("semantic-weight"),
+        enableBm25: document.getElementById("enable-bm25"),
+        enableSemantic: document.getElementById("enable-semantic"),
+        analyzeBtn: document.getElementById("analyze-btn"),
+        resetBtn: document.getElementById("reset-btn"),
+        queryLength: document.getElementById("query-length"),
+        formulaLine: document.getElementById("formula-line"),
+        decisionSummary: document.getElementById("decision-summary"),
+        decisionChips: document.getElementById("decision-chips"),
+        metricSkills: document.getElementById("metric-skills"),
+        metricSelected: document.getElementById("metric-selected"),
+        metricScore: document.getElementById("metric-score"),
+        metricLoaded: document.getElementById("metric-loaded"),
+        bm25List: document.getElementById("bm25-list"),
+        semanticList: document.getElementById("semantic-list"),
+        fusedList: document.getElementById("fused-list"),
+        bm25Count: document.getElementById("bm25-count"),
+        semanticCount: document.getElementById("semantic-count"),
+        fusedCount: document.getElementById("fused-count"),
+        selectedSkills: document.getElementById("selected-skills"),
+        availableSkills: document.getElementById("available-skills"),
+      };
+
+      const rangeBindings = [
+        ["topK", "top-k-value", v => v],
+        ["bm25TopK", "bm25-top-k-value", v => v],
+        ["semanticTopK", "semantic-top-k-value", v => v],
+        ["maxActiveSkills", "max-active-skills-value", v => v],
+        ["activationThreshold", "activation-threshold-value", v => Number(v).toFixed(2)],
+        ["bm25Weight", "bm25-weight-value", v => Number(v).toFixed(2)],
+        ["semanticWeight", "semantic-weight-value", v => Number(v).toFixed(2)],
+      ];
+
+      function escapeHtml(value) {
+        return String(value)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;");
+      }
+
+      function formatScore(value) {
+        const num = Number(value || 0);
+        return Number.isFinite(num) ? num.toFixed(4) : String(value);
+      }
+
+      function updateUIHints() {
+        els.queryLength.textContent = `${els.query.value.length} chars`;
+        els.formulaLine.textContent =
+          `final_score = ${Number(els.bm25Weight.value).toFixed(2)} * bm25_score + ` +
+          `${Number(els.semanticWeight.value).toFixed(2)} * semantic_score`;
+      }
+
+      function bindRanges() {
+        for (const [key, targetId, formatter] of rangeBindings) {
+          const input = els[key];
+          const target = document.getElementById(targetId);
+          const sync = () => {
+            target.textContent = formatter(input.value);
+            updateUIHints();
+          };
+          input.addEventListener("input", sync);
+          sync();
+        }
+      }
+
+      function collectPayload() {
+        return {
+          query: els.query.value,
+          skill_dir: els.skillDir.value,
+          embedding_model_name: els.embeddingModel.value,
+          top_k: Number(els.topK.value),
+          bm25_top_k: Number(els.bm25TopK.value),
+          semantic_top_k: Number(els.semanticTopK.value),
+          max_active_skills: Number(els.maxActiveSkills.value),
+          activation_threshold: Number(els.activationThreshold.value),
+          bm25_weight: Number(els.bm25Weight.value),
+          semantic_weight: Number(els.semanticWeight.value),
+          enable_bm25_retrieval: els.enableBm25.checked,
+          enable_semantic_retrieval: els.enableSemantic.checked
+        };
+      }
+
+      function renderBar(label, value, maxValue) {
+        const width = maxValue > 0 ? Math.max(4, (value / maxValue) * 100) : 0;
+        return `
+          <div class="bar-row">
+            <span>${escapeHtml(label)}</span>
+            <div class="bar-track"><div class="bar-fill" style="width:${width}%"></div></div>
+            <span>${formatScore(value)}</span>
+          </div>
+        `;
+      }
+
+      function renderCandidateList(container, countEl, candidates, mode) {
+        countEl.textContent = `${candidates.length} items`;
+        if (!candidates.length) {
+          container.innerHTML = `<div class="muted">No candidates.</div>`;
+          return;
+        }
+
+        const maxFinal = Math.max(...candidates.map(item => Number(item.final_score || item.score || 0)), 0);
+        const maxBm25 = Math.max(...candidates.map(item => Number(item.bm25_score || item.score || 0)), 0);
+        const maxSemantic = Math.max(...candidates.map(item => Number(item.semantic_score || item.score || 0)), 0);
+
+        container.innerHTML = candidates.map((item, index) => {
+          const bars = [];
+          if (mode === "bm25") {
+            bars.push(renderBar("bm25", Number(item.score || 0), maxBm25));
+          } else if (mode === "semantic") {
+            bars.push(renderBar("semantic", Number(item.score || 0), maxSemantic));
+          } else {
+            bars.push(renderBar("final", Number(item.final_score || 0), maxFinal));
+            bars.push(renderBar("bm25", Number(item.bm25_score || 0), maxBm25));
+            bars.push(renderBar("semantic", Number(item.semantic_score || 0), maxSemantic));
+          }
+
+          return `
+            <article class="candidate">
+              <div class="candidate-top">
+                <div class="candidate-title">#${index + 1} ${escapeHtml(item.skill || "-")}</div>
+                <div class="candidate-score">${mode === "fused" ? "final_score" : "score"} = ${formatScore(item.final_score ?? item.score)}</div>
+              </div>
+              <div class="bars">${bars.join("")}</div>
+              <div class="reason">${escapeHtml(item.reason || "")}</div>
+            </article>
+          `;
+        }).join("");
+      }
+
+      function renderSelectedSkills(items) {
+        if (!items.length) {
+          els.selectedSkills.innerHTML = `<div class="muted">No selected skills. Lazy load did not happen.</div>`;
+          return;
+        }
+        els.selectedSkills.innerHTML = items.map(item => `
+          <section class="detail-card">
+            <div class="detail-head">
+              <div class="detail-meta">
+                <div class="detail-title">${escapeHtml(item.skill)}</div>
+                <div class="detail-desc">${escapeHtml(item.description || "")}</div>
+                <div class="chips">
+                  <span class="chip">${escapeHtml(item.name || item.skill)}</span>
+                  <span class="chip">retrieval_text</span>
+                </div>
+              </div>
+              <button class="detail-toggle" type="button" data-skill="${escapeHtml(item.skill)}">Show Details</button>
+            </div>
+            <div class="detail-body">
+              <div class="reason">${escapeHtml(item.path)}</div>
+              <pre>${escapeHtml(item.content || "")}</pre>
+            </div>
+          </section>
+        `).join("");
+
+        els.selectedSkills.querySelectorAll(".detail-toggle").forEach(button => {
+          button.addEventListener("click", () => {
+            const card = button.closest(".detail-card");
+            const isOpen = card.classList.toggle("open");
+            button.textContent = isOpen ? "Hide Details" : "Show Details";
+          });
+        });
+      }
+
+      function renderAvailableSkills(items) {
+        els.availableSkills.innerHTML = items.map(item => `
+          <section class="skill-item">
+            <div class="candidate-top">
+              <div class="candidate-title">${escapeHtml(item.skill)}</div>
+              <div class="candidate-score">${escapeHtml(item.path)}</div>
+            </div>
+            <div class="reason">${escapeHtml(item.description || "")}</div>
+            <div class="chips"><span class="chip">${escapeHtml(item.name || "")}</span></div>
+          </section>
+        `).join("");
+      }
+
+      function renderSummary(data) {
+        const trace = data.prepared.trace || {};
+        const selected = data.selection.selected_skills || [];
+        const topScore = selected.length ? formatScore(selected[0].score) : "0.0000";
+
+        els.metricSkills.textContent = String((data.available_skills || []).length);
+        els.metricSelected.textContent = String(selected.length);
+        els.metricScore.textContent = topScore;
+        els.metricLoaded.textContent = trace.loaded ? "yes" : "no";
+
+        const fallbackClass = data.selection.fallback ? "warn" : "good";
+        const registryErrors = trace.registry_errors || [];
+        const retrievalErrors = trace.retrieval_errors || [];
+        els.decisionSummary.innerHTML = `
+          <span><strong>Reason:</strong> ${escapeHtml(data.selection.reason || "")}</span><br />
+          <span><strong>Fallback:</strong> <span class="${fallbackClass}">${escapeHtml(String(data.selection.fallback))}</span></span><br />
+          <span><strong>Threshold:</strong> ${formatScore(trace.activation_threshold || 0)}</span><br />
+          <span><strong>Registry Errors:</strong> ${registryErrors.length}</span><br />
+          <span><strong>Retrieval Errors:</strong> ${retrievalErrors.length}</span>
+        `;
+
+        const chips = [];
+        for (const item of selected) {
+          chips.push(`<span class="chip">${escapeHtml(item.skill)} · ${formatScore(item.score)}</span>`);
+        }
+        if (registryErrors.length) {
+          chips.push(`<span class="chip">registry errors ${registryErrors.length}</span>`);
+        }
+        if (retrievalErrors.length) {
+          chips.push(`<span class="chip">retrieval errors ${retrievalErrors.length}</span>`);
+        }
+        els.decisionChips.innerHTML = chips.join("");
+      }
+
+      async function analyze() {
+        updateUIHints();
+        els.analyzeBtn.disabled = true;
+        els.analyzeBtn.textContent = "Analyzing...";
+        try {
+          const response = await fetch("/api/analyze", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(collectPayload())
+          });
+          if (!response.ok) {
+            const text = await response.text();
+            throw new Error(text || "Request failed");
+          }
+          const data = await response.json();
+          const trace = data.prepared.trace || {};
+          renderSummary(data);
+          renderCandidateList(els.bm25List, els.bm25Count, trace.bm25_candidates || [], "bm25");
+          renderCandidateList(els.semanticList, els.semanticCount, trace.semantic_candidates || [], "semantic");
+          renderCandidateList(els.fusedList, els.fusedCount, trace.fused_candidates || [], "fused");
+          renderSelectedSkills(data.selected_skill_details || []);
+          renderAvailableSkills(data.available_skills || []);
+        } catch (error) {
+          els.decisionSummary.innerHTML = `<span class="warn">Failed to analyze: ${escapeHtml(error.message || String(error))}</span>`;
+        } finally {
+          els.analyzeBtn.disabled = false;
+          els.analyzeBtn.textContent = "Analyze Retrieval";
+        }
+      }
+
+      function resetForm() {
+        els.query.value = defaults.query;
+        els.skillDir.value = defaults.skillDir;
+        els.embeddingModel.value = defaults.embeddingModel;
+        els.topK.value = defaults.topK;
+        els.bm25TopK.value = defaults.bm25TopK;
+        els.semanticTopK.value = defaults.semanticTopK;
+        els.maxActiveSkills.value = defaults.maxActiveSkills;
+        els.activationThreshold.value = defaults.activationThreshold;
+        els.bm25Weight.value = defaults.bm25Weight;
+        els.semanticWeight.value = defaults.semanticWeight;
+        els.enableBm25.checked = defaults.enableBm25;
+        els.enableSemantic.checked = defaults.enableSemantic;
+        bindRanges();
+        updateUIHints();
+      }
+
+      els.query.addEventListener("input", updateUIHints);
+      els.analyzeBtn.addEventListener("click", analyze);
+      els.resetBtn.addEventListener("click", () => {
+        resetForm();
+        analyze();
+      });
+
+      bindRanges();
+      resetForm();
+      analyze();
+    </script>
+  </body>
+</html>

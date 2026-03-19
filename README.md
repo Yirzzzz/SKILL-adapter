@@ -85,6 +85,38 @@ print(prepared.payload)
 print(prepared.trace)
 ```
 
+## FastAPI retrieval visualizer
+
+项目提供一个基于 `FastAPI` 的本地 web 可视化页面，用于观察：
+- query 调整后的召回变化
+- BM25 候选、semantic 候选、fused ranking
+- raw score / final score
+- 最终 selected skill
+- prepare 后 payload
+- trace / registry errors / retrieval errors
+
+运行方式：
+
+```bash
+pip install -e ".[viz]"
+uvicorn examples.retrieval_web.app:app --reload --port 8000
+```
+
+然后访问：
+
+```text
+http://127.0.0.1:8000
+```
+
+页面支持：
+- 修改 query
+- 调整 `top_k` / `bm25_top_k` / `semantic_top_k`
+- 调整 `activation_threshold`
+- 调整 `bm25_weight` / `semantic_weight`
+- 开关 BM25 / semantic retrieval
+- 查看 selected skill 的全文预览
+- 对比 `route()` 与 `prepare()` 的 trace
+
 ## prepare(messages) 示例
 
 ```python

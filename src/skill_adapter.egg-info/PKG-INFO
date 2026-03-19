@@ -9,6 +9,10 @@ Requires-Dist: PyYAML>=6.0
 Requires-Dist: sentence-transformers>=3.0
 Provides-Extra: dev
 Requires-Dist: pytest>=8.0; extra == "dev"
+Provides-Extra: viz
+Requires-Dist: fastapi>=0.115; extra == "viz"
+Requires-Dist: uvicorn>=0.30; extra == "viz"
+Requires-Dist: jinja2>=3.1; extra == "viz"
 Dynamic: license-file
 
 ﻿# skill-adapter
@@ -98,6 +102,38 @@ print(prepared.payload)
 print(prepared.trace)
 ```
 
+## FastAPI retrieval visualizer
+
+项目提供一个基于 `FastAPI` 的本地 web 可视化页面，用于观察：
+- query 调整后的召回变化
+- BM25 候选、semantic 候选、fused ranking
+- raw score / final score
+- 最终 selected skill
+- prepare 后 payload
+- trace / registry errors / retrieval errors
+
+运行方式：
+
+```bash
+pip install -e ".[viz]"
+uvicorn examples.retrieval_web.app:app --reload --port 8000
+```
+
+然后访问：
+
+```text
+http://127.0.0.1:8000
+```
+
+页面支持：
+- 修改 query
+- 调整 `top_k` / `bm25_top_k` / `semantic_top_k`
+- 调整 `activation_threshold`
+- 调整 `bm25_weight` / `semantic_weight`
+- 开关 BM25 / semantic retrieval
+- 查看 selected skill 的全文预览
+- 对比 `route()` 与 `prepare()` 的 trace
+
 ## prepare(messages) 示例
 
 ```python
@@ -146,13 +182,11 @@ response = client.responses.create(
       "skill": "paper-summary",
       "bm25_score": 3.12,
       "semantic_score": 0.91,
-      "normalized_bm25_score": 1.0,
-      "normalized_semantic_score": 1.0,
-      "final_score": 1.0,
-      "reason": "hybrid fusion bm25=1.0 semantic=1.0"
+      "final_score": 2.015,
+      "reason": "hybrid fusion raw_bm25=3.12 raw_semantic=0.91"
     }
   ],
-  "selected_skills": [{"skill": "paper-summary", "score": 1.0}],
+  "selected_skills": [{"skill": "paper-summary", "score": 2.015}],
   "activation_threshold": 0.35,
   "fallback": False,
   "loaded": True,
