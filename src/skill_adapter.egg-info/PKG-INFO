@@ -1,0 +1,164 @@
+Metadata-Version: 2.4
+Name: skill-adapter
+Version: 0.1.0
+Summary: Low-intrusion Skill Adapter SDK for query-first routing and payload preparation
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+Requires-Dist: PyYAML>=6.0
+Provides-Extra: dev
+Requires-Dist: pytest>=8.0; extra == "dev"
+
+﻿# skill-adapter
+
+一个低侵入的 Skill Adapter SDK。你不需要迁移到新框架，只需要在现有 `client.xxx.create(...)` 调用前多包一层 `prepare()`。
+
+## 这是什么
+
+`skill-adapter` 是一个 **query-first routing + payload preparation** 的适配层 SDK。
+
+它不是新的 Agent 框架，也不接管你的执行引擎。它只做两件事：
+- `route(query)`: 基于技能 metadata 做召回和选择
+- `prepare(query, payload, mode)`: 选中 skill 后 lazy load `SKILL.md`，再把 augmentation 注入原始请求载荷
+
+## 为什么需要它
+
+很多已有 chat/agent/llm 项目没有 skill 机制，直接改框架成本高。
+
+这个 SDK 的目标是：
+- 保持你现有的模型调用方式
+- 通过最小代码改动加上 skill 能力
+- skill 失效时自动 fallback 到原始 payload，不阻断主流程
+
+## 3 分钟接入示例
+
+```python
+from skill_adapter import SkillRuntime
+
+runtime = SkillRuntime(skill_dirs=["./skills"])
+
+prepared = runtime.prepare(
+    query="请总结这篇论文",
+    payload={"messages": [{"role": "user", "content": "请总结这篇论文"}]},
+    mode="messages",
+    debug=True,
+)
+
+response = client.chat.completions.create(
+    model="Qwen/Qwen3-8B",
+    **prepared.payload,
+)
+
+print(prepared.trace)
+```
+
+## route 示例
+
+```python
+selection = runtime.route(query="请总结这篇论文", debug=True)
+print(selection.selected_skills)
+print(selection.candidates)
+print(selection.reason)
+```
+
+`route()` 只做 metadata routing，不做 payload augmentation。
+
+## prepare(messages) 示例
+
+```python
+prepared = runtime.prepare(
+    query="解释这段代码",
+    payload={"messages": [{"role": "user", "content": "解释这段代码"}]},
+    mode="messages",
+    debug=True,
+)
+
+response = client.chat.completions.create(
+    model="Qwen/Qwen3-8B",
+    **prepared.payload,
+)
+```
+
+## prepare(input) 示例
+
+```python
+prepared = runtime.prepare(
+    query="你好，介绍一下你自己",
+    payload={"input": "你好，介绍一下你自己"},
+    mode="input",
+    debug=True,
+)
+
+response = client.responses.create(
+    model="gpt-5",
+    **prepared.payload,
+)
+```
+
+## trace/debug 示例
+
+```python
+{
+  "selected_skills": [{"skill": "paper-summary", "score": 0.87}],
+  "fallback": False,
+  "loaded": True,
+  "mode": "messages",
+  "reason": "selected paper-summary",
+  "candidates": [
+    {"skill": "paper-summary", "score": 0.87, "reason": "..."},
+    {"skill": "web-summary", "score": 0.31, "reason": "..."}
+  ]
+}
+```
+
+## 项目结构与模块说明
+
+```text
+skill-adapter/
+  README.md
+  pyproject.toml
+  src/skill_adapter/
+    __init__.py
+    runtime.py          # 对外核心：route + prepare
+    config.py           # SkillConfig
+    models.py           # 数据结构
+    discovery.py        # 本地 skill 目录扫描
+    parser.py           # SKILL.md metadata 解析
+    registry.py         # metadata 索引
+    routing.py          # retrieval + activation
+    loading.py          # lazy load selected skills
+    augmentation.py     # payload 增强
+    retrieval/
+      __init__.py
+      base.py
+      keyword.py        # token overlap 检索
+  examples/
+    route_demo.py
+    prepare_messages_demo.py
+    prepare_input_demo.py
+    skills/
+      paper-summary/SKILL.md
+      web-summary/SKILL.md
+      code-explain/SKILL.md
+  tests/
+    test_discovery.py
+    test_parser.py
+    test_retrieval.py
+    test_routing.py
+    test_prepare.py
+```
+
+## 设计边界（MVP）
+
+当前版本只做：
+- local skill discovery
+- metadata parsing/indexing
+- query-first retrieval + activation
+- selected skill lazy load
+- payload augmentation
+- trace/debug
+- fallback
+
+当前版本不做：
+- tool execution / MCP / workflow
+- remote registry / marketplace
+- 向量数据库 / 重框架依赖
