@@ -1,10 +1,10 @@
 # skill-adapter 🧩
 
-一个低侵入的 Skill Adapter SDK。你不需要迁移到新框架，只需要在现有 `client.xxx.create(...)` 调用前多包一层 `prepare()`。
+![image-20260320000755640](/Users/yirz/PyCharmProject/SKILL-adapter/assets/image-20260320000755640.png)
 
 ## 这是什么 ✨
 
-`skill-adapter` 是一个 **query-first routing + payload preparation** 的适配层 SDK。
+`skill-adapter` 是一个 **query-first routing + payload preparation** 的适配层 SDK。你不需要迁移到新框架，只需要在现有 `client.xxx.create(...)` 调用前多包一层 `prepare()`。
 
 
 
