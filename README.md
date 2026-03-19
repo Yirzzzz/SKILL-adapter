@@ -2,28 +2,95 @@
 
 ![image-20260320000755640](./assets/image-20260320000755640.png)
 
-## 这是什么 ✨
+> 🚀 让任意 LLM 应用，以**低侵入**方式接入 `SKILL.md` 能力生态。
 
-`skill-adapter` 是一个 **query-first routing + payload preparation** 的适配层 SDK。你不需要迁移到新框架，只需要在现有 `client.xxx.create(...)` 调用前多包一层 `prepare()`。
+**SKILL-adapter** 是一个面向现有 LLM 系统的轻量级适配层。
 
+它不要求你重写整套 Agent 框架，也不要求你迁移现有后端，只需要在原有模型调用前多接入一层，就能获得：
 
-
-## 为什么需要它 🤔
-
-很多已有 chat/agent/llm 项目没有 skill 机制，出现可用性高的 SKILL 难以一键复用，并且直接改框架成本也极高。
-
-因此，`skill-adapter` 提供了一个快速复用 SKILL 的能力，它只做两件事：
-
-- `route(query)`: 基于技能 metadata （name & discription）做检索召回 （BM25 关键词召回 + sentence embedding 语义召回）；
-- `prepare(query, payload, mode)`: 选中 skill 后 lazy load `SKILL.md`，再把 augmentation 注入原始请求载荷；
-
-- 保持你现有的模型调用方式
-- 通过最小代码改动加上 skill 能力
-- skill 失效时自动 fallback 到原始 payload，不阻断主流程
+- 🧠 **Skill Routing**：根据用户 query 自动匹配最合适的 skill
+- 🪄 **Prompt Augmentation**：将 skill 指令注入到最终请求中
+- 🧩 **低侵入集成**：尽量不改动你已有的模型调用链路
+- 🛡️ **安全回退**：即使命不中 skill，也不会阻塞原有流程
 
 
 
-## 快速部署 🔧
+## ✨ 这个项目想解决什么问题？
+
+现在很多基于 skill 的系统都存在一个共同问题：
+
+- 你已经有了自己的 LLM 应用
+- 你已经有自己的后端、API、业务流程
+- 你也想复用越来越多的 `SKILL.md` 能力资产
+- 但大多数方案都默认你要**迁移整个框架**
+
+这其实很重，也很不现实。
+
+**SKILL-adapter 想做的事情很简单：**
+
+> ❌ 不是让你重写应用去适配 skill
+> ✅ 而是让 skill 来适配你的应用
+
+也就是说，它不是再造一个新的 Agent 框架，而是作为一个 **adapter 层**，插在你的现有系统和模型调用之间。
+
+
+
+## 🧭 它是怎么工作的？
+
+整个流程可以理解成：
+
+```
+用户 Query → Skill Routing → Skill 选择 → Prompt Augmentation → 现有 LLM 应用 → 模型输出
+```
+
+也就是说，你原本的系统可以保持不变：
+
+- 原有 API 服务不动
+- 原有模型客户端不动
+- 原有业务逻辑不动
+- 原有推理调用方式尽量不动
+
+你只是在模型调用前，多加了一层 **技能感知能力**。
+
+
+
+## 🔥 没有它 vs 有了它
+
+### ❌ 没有 SKILL-adapter
+
+很多 LLM 项目最后会慢慢变成这样：
+
+- prompt 模板散落在各个业务代码里
+- skill 逻辑靠手写 if / else 维护
+- 新能力接入越来越重
+- 查询路由越来越乱
+- prompt 工程难以复用
+- 业务系统和能力层强耦合
+
+最后的结果就是：
+
+> 😵 系统能跑，但是越来越难扩展、越来越难维护。
+
+------
+
+### ✅ 有了 SKILL-adapter
+
+你可以把 skill 从零散 prompt，变成一个**可检索、可路由、可注入、可复用**的能力层：
+
+- 📌 根据 query 自动匹配 skill
+- 📚 复用已有 `SKILL.md`
+- 🧠 支持关键词 / 语义 / 混合检索
+- 🪄 自动增强最终 prompt / payload
+- 🧩 尽量不破坏现有系统结构
+- 🛟 没命中 skill 时平滑回退
+
+最后形成一个更清晰的结构：
+
+> 😌 业务系统负责业务，adapter 负责能力接入，skill 负责行为增强。
+
+
+
+## 🔧 快速部署
 
 ```bash
 git clone https://github.com/Yirzzzz/SKILL-adapter.git
@@ -33,7 +100,7 @@ pip install -e .
 
 
 
-## 1 分钟接入示例 🚀
+## 🚀 1 分钟接入示例
 
 ```python
 # 原来代码
@@ -71,7 +138,7 @@ response = client.chat.completions.create(
 
 
 
-## route 示例 🛣️
+## 🛣️ route 示例
 
 通过该代码可以查看 SKILL 检索召回的结果
 
@@ -115,7 +182,7 @@ http://127.0.0.1:8000
 
 
 
-## prepare(messages) 示例 💬
+## 💬 prepare(messages) 示例
 
 ```python
 prepared = runtime.prepare(
@@ -131,7 +198,7 @@ response = client.chat.completions.create(
 )
 ```
 
-## prepare(input) 示例 📝
+## 📝 prepare(input) 示例 
 
 ```python
 prepared = runtime.prepare(
@@ -147,7 +214,7 @@ response = client.responses.create(
 )
 ```
 
-## trace/debug 示例 🧪
+## 🧪 trace/debug 示例
 
 ```python
 {
@@ -188,7 +255,7 @@ response = client.responses.create(
 
 
 
-## 项目结构与模块说明 🏗️
+## 🏗️ 项目结构与模块说明
 
 ```text
 skill-adapter/
@@ -221,6 +288,5 @@ skill-adapter/
       paper-summary/SKILL.md
       web-summary/SKILL.md
       code-explain/SKILL.md
- 
 ```
 
