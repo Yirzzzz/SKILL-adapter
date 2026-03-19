@@ -1,6 +1,6 @@
 # skill-adapter 🧩
 
-![image-20260320000755640](/Users/yirz/PyCharmProject/SKILL-adapter/assets/image-20260320000755640.png)
+![image-20260320000755640](./assets/image-20260320000755640.png)
 
 ## 这是什么 ✨
 
