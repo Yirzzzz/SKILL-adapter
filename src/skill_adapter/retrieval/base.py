@@ -18,3 +18,6 @@ class BaseRetriever(ABC):
     @abstractmethod
     def retrieve(self, query: str, skills: List[SkillMetadata], top_k: int) -> RetrievalResult:
         raise NotImplementedError
+
+    def debug_info(self) -> dict:
+        return {}

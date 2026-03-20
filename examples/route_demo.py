@@ -1,9 +1,15 @@
-﻿from skill_adapter import SkillRuntime
+﻿from skill_adapter import SkillConfig, SkillRuntime
 
-runtime = SkillRuntime(skill_dirs=["./examples/skills"])
+runtime = SkillRuntime(
+    config=SkillConfig(
+        skill_dirs=["./examples/skills"],
+        activation_threshold=0.15,
+        retrieval_mode="bm25_sentence",
+    )
+)
 
-selection = runtime.route(query="请总结这篇论文", debug=True)
+query = "summarize this paper"
+selection = runtime.route(query=query, debug=True)
 print("selected_skills=", selection.selected_skills)
-print("candidates=", selection.candidates)
 print("reason=", selection.reason)
-print("fallback=", selection.fallback)
+print("trace=", selection.trace)

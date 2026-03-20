@@ -108,7 +108,8 @@
 
       input[type="text"],
       textarea,
-      input[type="number"] {
+      input[type="number"],
+      select {
         width: 100%;
         border: 1px solid rgba(25, 36, 51, 0.12);
         border-radius: 14px;
@@ -541,40 +542,64 @@
           </div>
 
           <div class="group">
+            <div class="label-row"><label for="retrieval-mode">Retrieval Mode</label></div>
+            <select id="retrieval-mode">
+              <option value="bm25_sentence">bm25_sentence</option>
+              <option value="bm25_bge_m3">bm25_bge_m3</option>
+              <option value="bge_m3_rerank">bge_m3_rerank</option>
+              <option value="bm25_bge_m3_rerank">bm25_bge_m3_rerank</option>
+            </select>
+          </div>
+
+          <div class="group" id="group-sentence-model-name">
             <div class="label-row"><label for="embedding-model">Embedding Model</label></div>
             <input id="embedding-model" type="text" value="{{ default_embedding_model }}" />
           </div>
 
-          <div class="group">
-            <div class="label-row"><label for="query">Query</label><span id="query-length">0 chars</span></div>
-            <textarea id="query">帮我做一道题：9.9和9.11谁大</textarea>
+          <div class="group" id="group-bge-m3-model-name">
+            <div class="label-row"><label for="bge-m3-model">BGE-M3 Model</label></div>
+            <input id="bge-m3-model" type="text" value="{{ default_bge_m3_model }}" />
+          </div>
+
+          <div class="group" id="group-reranker-model-name">
+            <div class="label-row"><label for="reranker-model">Reranker Model</label></div>
+            <input id="reranker-model" type="text" value="{{ default_reranker_model }}" />
           </div>
 
           <div class="group">
+            <div class="label-row"><label for="query">Query</label><span id="query-length">0 chars</span></div>
+            <textarea id="query">&#35831;&#24110;&#25105;&#20570;&#19968;&#36947;&#39064;&#65306;0.9&#21644;0.11&#21738;&#20010;&#25968;&#23383;&#22823;</textarea>
+          </div>
+
+          <div class="group" id="group-top-k">
             <div class="label-row"><label for="top-k">Top K</label><span id="top-k-value">3</span></div>
             <input class="range" id="top-k" type="range" min="1" max="10" value="3" />
           </div>
-          <div class="group">
+          <div class="group" id="group-bm25-top-k">
             <div class="label-row"><label for="bm25-top-k">BM25 Top K</label><span id="bm25-top-k-value">5</span></div>
             <input class="range" id="bm25-top-k" type="range" min="1" max="12" value="5" />
           </div>
-          <div class="group">
+          <div class="group" id="group-semantic-top-k">
             <div class="label-row"><label for="semantic-top-k">Semantic Top K</label><span id="semantic-top-k-value">5</span></div>
             <input class="range" id="semantic-top-k" type="range" min="1" max="12" value="5" />
           </div>
-          <div class="group">
+          <div class="group" id="group-rerank-top-k">
+            <div class="label-row"><label for="rerank-top-k">Rerank Top K</label><span id="rerank-top-k-value">20</span></div>
+            <input class="range" id="rerank-top-k" type="range" min="1" max="30" value="20" />
+          </div>
+          <div class="group" id="group-max-active-skills">
             <div class="label-row"><label for="max-active-skills">Max Active Skills</label><span id="max-active-skills-value">1</span></div>
             <input class="range" id="max-active-skills" type="range" min="1" max="5" value="1" />
           </div>
-          <div class="group">
+          <div class="group" id="group-activation-threshold">
             <div class="label-row"><label for="activation-threshold">Activation Threshold</label><span id="activation-threshold-value">0.35</span></div>
             <input class="range" id="activation-threshold" type="range" min="0" max="5" step="0.05" value="0.35" />
           </div>
-          <div class="group">
+          <div class="group" id="group-bm25-weight">
             <div class="label-row"><label for="bm25-weight">BM25 Weight</label><span id="bm25-weight-value">0.50</span></div>
             <input class="range" id="bm25-weight" type="range" min="0" max="3" step="0.05" value="0.5" />
           </div>
-          <div class="group">
+          <div class="group" id="group-semantic-weight">
             <div class="label-row"><label for="semantic-weight">Semantic Weight</label><span id="semantic-weight-value">0.50</span></div>
             <input class="range" id="semantic-weight" type="range" min="0" max="3" step="0.05" value="0.5" />
           </div>
@@ -655,12 +680,16 @@
 
     <script>
       const defaults = {
-        query: "帮我做一道题：9.9和9.11谁大",
+        query: "\u8bf7\u5e2e\u6211\u505a\u4e00\u9053\u9898\uff1a0.9\u548c0.11\u54ea\u4e2a\u6570\u5b57\u5927",
         skillDir: {{ default_skill_dir | tojson }},
+        retrievalMode: {{ default_retrieval_mode | tojson }},
         embeddingModel: {{ default_embedding_model | tojson }},
+        bgeM3Model: {{ default_bge_m3_model | tojson }},
+        rerankerModel: {{ default_reranker_model | tojson }},
         topK: 3,
         bm25TopK: 5,
         semanticTopK: 5,
+        rerankTopK: 20,
         maxActiveSkills: 1,
         activationThreshold: 0.35,
         bm25Weight: 0.5,
@@ -672,10 +701,14 @@
       const els = {
         query: document.getElementById("query"),
         skillDir: document.getElementById("skill-dir"),
+        retrievalMode: document.getElementById("retrieval-mode"),
         embeddingModel: document.getElementById("embedding-model"),
+        bgeM3Model: document.getElementById("bge-m3-model"),
+        rerankerModel: document.getElementById("reranker-model"),
         topK: document.getElementById("top-k"),
         bm25TopK: document.getElementById("bm25-top-k"),
         semanticTopK: document.getElementById("semantic-top-k"),
+        rerankTopK: document.getElementById("rerank-top-k"),
         maxActiveSkills: document.getElementById("max-active-skills"),
         activationThreshold: document.getElementById("activation-threshold"),
         bm25Weight: document.getElementById("bm25-weight"),
@@ -706,11 +739,34 @@
         ["topK", "top-k-value", v => v],
         ["bm25TopK", "bm25-top-k-value", v => v],
         ["semanticTopK", "semantic-top-k-value", v => v],
+        ["rerankTopK", "rerank-top-k-value", v => v],
         ["maxActiveSkills", "max-active-skills-value", v => v],
         ["activationThreshold", "activation-threshold-value", v => Number(v).toFixed(2)],
         ["bm25Weight", "bm25-weight-value", v => Number(v).toFixed(2)],
         ["semanticWeight", "semantic-weight-value", v => Number(v).toFixed(2)],
       ];
+
+      const modeProfilesFallback = {
+        bm25_sentence: {required_params: ["top_k", "bm25_top_k", "semantic_top_k", "bm25_weight", "semantic_weight", "activation_threshold", "sentence_model_name"]},
+        bm25_bge_m3: {required_params: ["top_k", "bm25_top_k", "semantic_top_k", "bm25_weight", "semantic_weight", "activation_threshold", "bge_m3_model_name"]},
+        bge_m3_rerank: {required_params: ["top_k", "semantic_top_k", "rerank_top_k", "activation_threshold", "bge_m3_model_name", "reranker_model_name"]},
+        bm25_bge_m3_rerank: {required_params: ["top_k", "bm25_top_k", "semantic_top_k", "rerank_top_k", "bm25_weight", "semantic_weight", "activation_threshold", "bge_m3_model_name", "reranker_model_name"]},
+      };
+      let modeProfiles = {...modeProfilesFallback};
+
+      const groupMap = {
+        top_k: "group-top-k",
+        bm25_top_k: "group-bm25-top-k",
+        semantic_top_k: "group-semantic-top-k",
+        rerank_top_k: "group-rerank-top-k",
+        max_active_skills: "group-max-active-skills",
+        activation_threshold: "group-activation-threshold",
+        bm25_weight: "group-bm25-weight",
+        semantic_weight: "group-semantic-weight",
+        sentence_model_name: "group-sentence-model-name",
+        bge_m3_model_name: "group-bge-m3-model-name",
+        reranker_model_name: "group-reranker-model-name",
+      };
 
       function escapeHtml(value) {
         return String(value)
@@ -749,10 +805,14 @@
         return {
           query: els.query.value,
           skill_dir: els.skillDir.value,
-          embedding_model_name: els.embeddingModel.value,
+          retrieval_mode: els.retrievalMode.value,
+          sentence_model_name: els.embeddingModel.value,
+          bge_m3_model_name: els.bgeM3Model.value,
+          reranker_model_name: els.rerankerModel.value,
           top_k: Number(els.topK.value),
           bm25_top_k: Number(els.bm25TopK.value),
           semantic_top_k: Number(els.semanticTopK.value),
+          rerank_top_k: Number(els.rerankTopK.value),
           max_active_skills: Number(els.maxActiveSkills.value),
           activation_threshold: Number(els.activationThreshold.value),
           bm25_weight: Number(els.bm25Weight.value),
@@ -760,6 +820,37 @@
           enable_bm25_retrieval: els.enableBm25.checked,
           enable_semantic_retrieval: els.enableSemantic.checked
         };
+      }
+
+      function applyModeProfile(mode) {
+        const profile = modeProfiles[mode] || modeProfilesFallback.bm25_sentence;
+        const required = new Set(profile.required_params || []);
+        required.add("max_active_skills");
+        for (const [param, groupId] of Object.entries(groupMap)) {
+          const el = document.getElementById(groupId);
+          if (!el) continue;
+          el.style.display = required.has(param) ? "" : "none";
+        }
+      }
+
+      async function loadRetrievalModes() {
+        try {
+          const response = await fetch("/api/retrieval/modes");
+          if (!response.ok) return;
+          const data = await response.json();
+          modeProfiles = data.modes || modeProfilesFallback;
+          const current = els.retrievalMode.value;
+          els.retrievalMode.innerHTML = Object.keys(modeProfiles)
+            .map(mode => `<option value="${escapeHtml(mode)}">${escapeHtml(mode)}</option>`)
+            .join("");
+          if (modeProfiles[current]) {
+            els.retrievalMode.value = current;
+          }
+        } catch (_) {
+          modeProfiles = modeProfilesFallback;
+        } finally {
+          applyModeProfile(els.retrievalMode.value);
+        }
       }
 
       function renderBar(label, value, maxValue) {
@@ -923,10 +1014,14 @@
       function resetForm() {
         els.query.value = defaults.query;
         els.skillDir.value = defaults.skillDir;
+        els.retrievalMode.value = defaults.retrievalMode;
         els.embeddingModel.value = defaults.embeddingModel;
+        els.bgeM3Model.value = defaults.bgeM3Model;
+        els.rerankerModel.value = defaults.rerankerModel;
         els.topK.value = defaults.topK;
         els.bm25TopK.value = defaults.bm25TopK;
         els.semanticTopK.value = defaults.semanticTopK;
+        els.rerankTopK.value = defaults.rerankTopK;
         els.maxActiveSkills.value = defaults.maxActiveSkills;
         els.activationThreshold.value = defaults.activationThreshold;
         els.bm25Weight.value = defaults.bm25Weight;
@@ -935,9 +1030,11 @@
         els.enableSemantic.checked = defaults.enableSemantic;
         bindRanges();
         updateUIHints();
+        applyModeProfile(els.retrievalMode.value);
       }
 
       els.query.addEventListener("input", updateUIHints);
+      els.retrievalMode.addEventListener("change", () => applyModeProfile(els.retrievalMode.value));
       els.analyzeBtn.addEventListener("click", analyze);
       els.resetBtn.addEventListener("click", () => {
         resetForm();
@@ -946,6 +1043,7 @@
 
       bindRanges();
       resetForm();
+      loadRetrievalModes();
       analyze();
     </script>
   </body>

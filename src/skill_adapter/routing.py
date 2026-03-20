@@ -13,6 +13,7 @@ class SkillRouter:
 
     def route(self, query: str, registry: SkillRegistry) -> SkillSelection:
         metadata = registry.list_metadata()
+        retriever_debug = self.retriever.debug_info() if hasattr(self.retriever, "debug_info") else {}
         base_trace = {
             "query": query,
             "bm25_candidates": [],
@@ -20,6 +21,9 @@ class SkillRouter:
             "fused_candidates": [],
             "selected_skills": [],
             "activation_threshold": self.config.activation_threshold,
+            "retrieval_mode": self.config.retrieval_mode,
+            "semantic_backend": retriever_debug.get("semantic_backend", "unknown"),
+            "reranker_enabled": retriever_debug.get("reranker_enabled", False),
             "fallback": True,
             "reason": "",
             "registry_errors": registry.build_errors,
@@ -34,7 +38,19 @@ class SkillRouter:
                 trace={**base_trace, "reason": "no skill metadata available"},
             )
 
-        retrieval = self.retriever.retrieve(query=query, skills=metadata, top_k=self.config.top_k)
+        try:
+            retrieval = self.retriever.retrieve(query=query, skills=metadata, top_k=self.config.top_k)
+        except NotImplementedError as exc:
+            reason = f"retrieval mode not implemented: {exc}"
+            trace = {**base_trace, "reason": reason, "retrieval_errors": [str(exc)]}
+            return SkillSelection(
+                selected_skills=[],
+                candidates=[],
+                reason=reason,
+                fallback=True,
+                trace=trace,
+            )
+
         candidates = retrieval.fused_candidates
         candidate_dicts = [
             {

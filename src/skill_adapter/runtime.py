@@ -6,8 +6,7 @@ from .config import SkillConfig
 from .loading import SkillLoader
 from .models import PreparedPayload, SkillSelection
 from .registry import SkillRegistry
-from .retrieval.hybrid import HybridRetriever
-from .retrieval.semantic import SentenceTransformerEmbeddingBackend
+from .retrieval.factory import build_retriever
 from .routing import SkillRouter
 
 
@@ -26,12 +25,7 @@ class SkillRuntime:
         self.registry = SkillRegistry.build(self.config.skill_dirs)
         self.router = SkillRouter(
             config=self.config,
-            retriever=HybridRetriever(
-                config=self.config,
-                embedding_backend=SentenceTransformerEmbeddingBackend(
-                    model_name=self.config.embedding_model_name
-                ),
-            ),
+            retriever=build_retriever(self.config),
         )
         self.loader = SkillLoader()
 

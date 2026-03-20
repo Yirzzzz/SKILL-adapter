@@ -290,3 +290,56 @@ skill-adapter/
       code-explain/SKILL.md
 ```
 
+
+## Retrieval Mode Configuration
+
+You can now switch retrieval pipelines via `SkillConfig(retrieval_mode=...)` without changing runtime code.
+
+Supported modes:
+
+- `bm25_sentence` (default): BM25 + sentence-transformers hybrid. Fully implemented. Legacy baseline.
+- `bm25_bge_m3`: BM25 + BGE-M3 dense hybrid. Fully implemented. Recommended baseline for phase-2 benchmark.
+- `bge_m3_rerank`: BGE-M3 first-stage + reranker pipeline. Implemented (with dependency fallback).
+- `bm25_bge_m3_rerank`: BM25 + BGE-M3 first-stage + reranker pipeline. Implemented (with dependency fallback).
+
+Example 1 (legacy baseline):
+
+```python
+from skill_adapter import SkillConfig, SkillRuntime
+
+runtime = SkillRuntime(
+    config=SkillConfig(
+        skill_dirs=["./skills"],
+        activation_threshold=0.15,
+        retrieval_mode="bm25_sentence",
+    )
+)
+```
+
+Example 2 (phase-2 baseline):
+
+```python
+from skill_adapter import SkillConfig, SkillRuntime
+
+runtime = SkillRuntime(
+    config=SkillConfig(
+        skill_dirs=["./skills"],
+        activation_threshold=0.15,
+        retrieval_mode="bm25_bge_m3",
+        bge_m3_model_name="BAAI/bge-m3",
+    )
+)
+```
+
+Trace now includes pipeline metadata:
+
+- `retrieval_mode`
+- `semantic_backend`
+- `reranker_enabled`
+
+If you prefer hard-fail instead of fallback when retrieval dependencies/models are unavailable, set:
+
+```python
+SkillConfig(..., strict_retrieval=True)
+```
+

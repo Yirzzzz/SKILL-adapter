@@ -1,9 +1,15 @@
-from skill_adapter import SkillRuntime
+﻿from skill_adapter import SkillConfig, SkillRuntime
 
-runtime = SkillRuntime(skill_dirs=["./examples/skills"])
+runtime = SkillRuntime(
+    config=SkillConfig(
+        skill_dirs=["./examples/skills"],
+        activation_threshold=0.15,
+        retrieval_mode="bm25_bge_m3",
+        bge_m3_model_name="BAAI/bge-m3",
+    )
+)
 
-query = "请总结这篇论文的贡献和局限"
-
+query = "help me route this coding request"
 selection = runtime.route(query=query, debug=True)
 print("selection.selected_skills=", selection.selected_skills)
 print("selection.trace=", selection.trace)
@@ -14,5 +20,4 @@ prepared = runtime.prepare(
     mode="messages",
     debug=True,
 )
-print("prepared.payload=", prepared.payload)
 print("prepared.trace=", prepared.trace)

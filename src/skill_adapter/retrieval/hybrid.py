@@ -1,10 +1,11 @@
-from typing import List, Optional
+﻿from typing import List, Optional
 
 from ..config import SkillConfig
 from ..models import SkillCandidate, SkillMetadata
 from .base import BaseRetriever, RetrievalResult
 from .bm25 import BM25Retriever
 from .semantic import EmbeddingBackend, SemanticRetriever
+
 
 class HybridRetriever(BaseRetriever):
     def __init__(
@@ -14,15 +15,37 @@ class HybridRetriever(BaseRetriever):
         bm25_retriever: Optional[BM25Retriever] = None,
         embedding_backend: Optional[EmbeddingBackend] = None,
         semantic_retriever: Optional[SemanticRetriever] = None,
+        enable_bm25: bool = True,
+        enable_semantic: bool = True,
+        semantic_backend_name: str = "sentence_transformers",
+        retrieval_mode: Optional[str] = None,
     ) -> None:
         self.config = config
+        self.enable_bm25 = enable_bm25
+        self.enable_semantic = enable_semantic
+        self.retrieval_mode = retrieval_mode or config.retrieval_mode
         self.bm25_retriever = bm25_retriever or BM25Retriever()
         if semantic_retriever is not None:
             self.semantic_retriever = semantic_retriever
+            self.semantic_backend_name = getattr(
+                semantic_retriever, "backend_name", semantic_backend_name
+            )
         elif embedding_backend is not None:
-            self.semantic_retriever = SemanticRetriever(embedding_backend)
+            self.semantic_retriever = SemanticRetriever(
+                embedding_backend,
+                backend_name=semantic_backend_name,
+            )
+            self.semantic_backend_name = semantic_backend_name
         else:
             self.semantic_retriever = None
+            self.semantic_backend_name = semantic_backend_name
+
+    def debug_info(self) -> dict:
+        return {
+            "retrieval_mode": self.retrieval_mode,
+            "semantic_backend": self.semantic_backend_name,
+            "reranker_enabled": False,
+        }
 
     def retrieve(self, query: str, skills: List[SkillMetadata], top_k: int) -> RetrievalResult:
         result = RetrievalResult(query=query)
@@ -32,15 +55,17 @@ class HybridRetriever(BaseRetriever):
         bm25_candidates: List[SkillCandidate] = []
         semantic_candidates: List[SkillCandidate] = []
 
-        if self.config.enable_bm25_retrieval:
+        if self.enable_bm25:
             bm25_candidates = self.bm25_retriever.retrieve(query, skills, self.config.bm25_top_k)
 
-        if self.config.enable_semantic_retrieval and self.semantic_retriever is not None:
+        if self.enable_semantic and self.semantic_retriever is not None:
             try:
                 semantic_candidates = self.semantic_retriever.retrieve(
                     query, skills, self.config.semantic_top_k
                 )
             except Exception as exc:
+                if self.config.strict_retrieval:
+                    raise RuntimeError(f"semantic retrieval unavailable: {exc}") from exc
                 result.errors.append(f"semantic retrieval unavailable: {exc}")
 
         result.bm25_candidates = bm25_candidates
@@ -70,8 +95,8 @@ class HybridRetriever(BaseRetriever):
                     bm25_score=round(bm25_score, 6),
                     semantic_score=round(semantic_score, 6),
                     reason=(
-                        f"hybrid fusion raw_bm25={round(bm25_score, 4)} "
-                        f"raw_semantic={round(semantic_score, 4)}"
+                        f"hybrid[{self.retrieval_mode}] semantic_backend={self.semantic_backend_name} "
+                        f"raw_bm25={round(bm25_score, 4)} raw_semantic={round(semantic_score, 4)}"
                     ),
                 )
             )
