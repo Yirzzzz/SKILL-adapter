@@ -1,11 +1,11 @@
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Mapping
 
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
-from pydantic import BaseModel, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, model_validator
 
 from skill_adapter import SkillConfig, SkillRuntime
 from skill_adapter.retrieval.hybrid import HybridRetriever
@@ -19,6 +19,8 @@ TEMPLATES_DIR = BASE_DIR / "templates"
 
 
 class AnalyzeRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
     query: str = Field(default="", description="User query for retrieval analysis")
     skill_dir: str = Field(default_factory=lambda: str(DEFAULT_SKILL_DIR))
     top_k: int = 3
@@ -26,11 +28,55 @@ class AnalyzeRequest(BaseModel):
     semantic_top_k: int = 5
     max_active_skills: int = 1
     activation_threshold: float = 0.35
-    bm25_weight: float = 0.5
-    semantic_weight: float = 0.5
+    bm25_weight: float = Field(
+        default=0.5,
+        validation_alias=AliasChoices("bm25_weight", "bm25Weight", "bm_weight", "bmWeight"),
+    )
+    semantic_weight: float = Field(
+        default=0.5,
+        validation_alias=AliasChoices("semantic_weight", "semanticWeight"),
+    )
     embedding_model_name: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
-    enable_bm25_retrieval: bool = True
-    enable_semantic_retrieval: bool = True
+    enable_bm25_retrieval: bool = Field(
+        default=True,
+        validation_alias=AliasChoices(
+            "enable_bm25_retrieval",
+            "enableBm25Retrieval",
+            "enable_bm25",
+            "enable_bm",
+            "enableBM",
+        ),
+    )
+    enable_semantic_retrieval: bool = Field(
+        default=True,
+        validation_alias=AliasChoices(
+            "enable_semantic_retrieval",
+            "enableSemanticRetrieval",
+            "enable_semantic",
+            "enableSemantic",
+        ),
+    )
+
+    @model_validator(mode="before")
+    @classmethod
+    def _apply_legacy_weight_aliases(cls, value: Any) -> Any:
+        if not isinstance(value, Mapping):
+            return value
+
+        data = dict(value)
+        if "weight" in data:
+            weight_value = data["weight"]
+            if isinstance(weight_value, Mapping):
+                if "bm25_weight" not in data and "bm25" in weight_value:
+                    data["bm25_weight"] = weight_value["bm25"]
+                if "semantic_weight" not in data and "semantic" in weight_value:
+                    data["semantic_weight"] = weight_value["semantic"]
+            else:
+                if "bm25_weight" not in data:
+                    data["bm25_weight"] = weight_value
+                if "semantic_weight" not in data:
+                    data["semantic_weight"] = weight_value
+        return data
 
 
 @lru_cache(maxsize=4)
