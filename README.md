@@ -343,3 +343,11 @@ If you prefer hard-fail instead of fallback when retrieval dependencies/models a
 SkillConfig(..., strict_retrieval=True)
 ```
 
+
+
+
+
+## TODO checklist
+
+- [ ] SKILL-query Benchmark
+- [ ] 面向 skill routing 的 domain-specific reranker distillation
